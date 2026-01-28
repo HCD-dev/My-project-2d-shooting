@@ -10,13 +10,13 @@ public class Pickup : MonoBehaviour
 
     void Update()
     {
-        // Menzildeysek ve E'ye basarsak al
+        // Medkit ve Grenade otomatik alýndýðý için Update'te E kontrolüne gerek yok
+        if (itemType == ItemType.Medkit || itemType == ItemType.Grenade) return;
+
+        // Silahlarý (Handgun, Shotgun, Rifle) E ile al
         if (isPlayerInRange && Input.GetKeyDown(KeyCode.E))
         {
-            if (playerRef != null)
-            {
-                DoPickup();
-            }
+            if (playerRef != null) DoPickup();
         }
     }
 
@@ -34,23 +34,39 @@ public class Pickup : MonoBehaviour
                 playerRef.PickUpWeapon(PlayerController.WeaponType.Rifle);
                 break;
             case ItemType.Medkit:
-                if (playerRef.health < 100) playerRef.AddHealth(50);
-                else return; // Can doluysa yok etme
+                // Can 100'den azsa al
+                if (playerRef.health < 100f)
+                {
+                    playerRef.AddHealth(50f);
+                }
+                else return; // Can doluysa yerde kalsýn
                 break;
             case ItemType.Grenade:
-                if (playerRef.grenadeCount < 3) playerRef.grenadeCount++;
-                else return; // Bomba doluysa yok etme
+                // Bomba sayýsý 3'ten azsa otomatik al
+                if (playerRef.grenadeCount < 3)
+                {
+                    playerRef.grenadeCount++;
+                }
+                else return; // Bomba doluysa yerde kalsýn
                 break;
         }
-        Destroy(gameObject); // Alým baþarýlýysa yerdeki objeyi sil
+
+        // Eðer buraya kadar kod ulaþtýysa (return olmadýysa) objeyi yok et
+        Destroy(gameObject);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
         {
-            isPlayerInRange = true;
             playerRef = other.GetComponent<PlayerController>();
+            isPlayerInRange = true;
+
+            // OTOMATÝK ALMA: Medkit veya Grenade ise çarptýðýn an al
+            if (itemType == ItemType.Medkit || itemType == ItemType.Grenade)
+            {
+                DoPickup();
+            }
         }
     }
 

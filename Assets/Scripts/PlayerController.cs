@@ -1,7 +1,25 @@
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro; // TextMeshPro için gerekli
 
 public class PlayerController : MonoBehaviour
 {
+    [Header("UI Referanslarý (Sürükle-Býrak)")]
+    public Slider healthSlider;
+    public TextMeshProUGUI grenadeText; // TMP tipine güncellendi
+    public RawImage grenadeDisplay;
+
+    [Header("Slot 1 Raw Images (Obje olarak)")]
+    public RawImage s1_Handgun;
+    public RawImage s1_Shotgun;
+    public RawImage s1_Rifle;
+
+    [Header("Slot 2 Raw Images (Obje olarak)")]
+    public RawImage s2_Handgun;
+    public RawImage s2_Shotgun;
+    public RawImage s2_Rifle;
+
+    [Header("Oyuncu Ýstatistikleri")]
     public float moveSpeed = 5f;
     public float health = 100f;
     public int grenadeCount = 3;
@@ -13,12 +31,12 @@ public class PlayerController : MonoBehaviour
     public int currentSlot = 0;
     private bool isHoldingGrenade = false;
 
-    [Header("Silah Görselleri (Karakterin Altýndaki Objeler)")]
+    [Header("Silah Görselleri (Karakterin Elindekiler)")]
     public GameObject handgunObject;
     public GameObject shotgunObject;
     public GameObject rifleObject;
 
-    [Header("Yere Atýlacak Prefablar (Pickup Prefablarý)")]
+    [Header("Yere Atýlacak Prefablar")]
     public GameObject handgunPickupPrefab;
     public GameObject shotgunPickupPrefab;
     public GameObject riflePickupPrefab;
@@ -40,22 +58,29 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        // TEST ÝÇÝN: Oyuna baþlarken eline silah ver
+
+        if (healthSlider != null)
+        {
+            healthSlider.maxValue = 100f;
+            healthSlider.value = health;
+        }
+
+        // Baþlangýçta 1. slotta tabanca olsun
         inventory[0] = WeaponType.Handgun;
         UpdateWeaponVisuals();
     }
 
     void Update()
     {
+        // Girdiler
         moveInput.x = Input.GetAxisRaw("Horizontal");
         moveInput.y = Input.GetAxisRaw("Vertical");
         mousePos = cam.ScreenToWorldPoint(Input.mousePosition);
 
-        // Slot Seçimi (1 ve 2)
+        // Slot Seçimi (1-2-3)
         if (Input.GetKeyDown(KeyCode.Alpha1)) { currentSlot = 0; isHoldingGrenade = false; UpdateWeaponVisuals(); }
         if (Input.GetKeyDown(KeyCode.Alpha2)) { currentSlot = 1; isHoldingGrenade = false; UpdateWeaponVisuals(); }
 
-        // 3'e Basýnca Bombayý Seç
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
             if (grenadeCount > 0)
@@ -65,73 +90,93 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // G ile Silahý Yere At
+        // Silah Atma
         if (Input.GetKeyDown(KeyCode.G)) DropWeapon();
 
-        // Ateþ Etme veya Bomba Atma (Rifle için GetButton kullanarak basýlý tutma özelliði eklendi)
+        // Ateþ/Bomba
         if (Input.GetButton("Fire1"))
         {
             if (isHoldingGrenade)
             {
-                if (Input.GetButtonDown("Fire1")) ThrowGrenade(); // Bomba tek týkla atýlýr
+                if (Input.GetButtonDown("Fire1")) ThrowGrenade();
             }
             else if (inventory[currentSlot] != WeaponType.None)
             {
                 Shoot();
             }
         }
+
+        // Her karede UI ve HUD güncelle
+        UpdateUI();
     }
 
     void FixedUpdate()
     {
-        // 1. Önce nereye gitmek istediðimizi hesaplýyoruz
+        // Hareket ve Sýnýrlandýrma
         Vector2 targetPosition = rb.position + moveInput.normalized * moveSpeed * Time.fixedDeltaTime;
-
-        // 2. Gidilecek yeri sýnýrlar (-9 ile 9 ve -5 ile 5) içerisinde kýsýtlýyoruz
         targetPosition.x = Mathf.Clamp(targetPosition.x, -9f, 9f);
         targetPosition.y = Mathf.Clamp(targetPosition.y, -5f, 5f);
-
-        // 3. Rigidbody'yi sadece bu "güvenli" alana taþýyoruz
         rb.MovePosition(targetPosition);
 
-        // Bakýþ yönü (Mouse takibi)
+        // Bakýþ Yönü
         Vector2 lookDir = mousePos - rb.position;
         float angle = Mathf.Atan2(lookDir.y, lookDir.x) * Mathf.Rad2Deg - 90f;
         rb.rotation = angle;
     }
 
+    void UpdateUI()
+    {
+        if (healthSlider != null) healthSlider.value = health;
+        if (grenadeText != null) grenadeText.text = "x" + grenadeCount;
+
+        if (grenadeDisplay != null)
+            grenadeDisplay.enabled = (grenadeCount > 0);
+
+        UpdateWeaponHUD();
+    }
+
+    void UpdateWeaponHUD()
+    {
+        // SLOT 1 KONTROLÜ
+        WeaponType s1 = inventory[0];
+        if (s1_Handgun) s1_Handgun.gameObject.SetActive(s1 == WeaponType.Handgun);
+        if (s1_Shotgun) s1_Shotgun.gameObject.SetActive(s1 == WeaponType.Shotgun);
+        if (s1_Rifle) s1_Rifle.gameObject.SetActive(s1 == WeaponType.Rifle);
+
+        // SLOT 2 KONTROLÜ
+        WeaponType s2 = inventory[1];
+        if (s2_Handgun) s2_Handgun.gameObject.SetActive(s2 == WeaponType.Handgun);
+        if (s2_Shotgun) s2_Shotgun.gameObject.SetActive(s2 == WeaponType.Shotgun);
+        if (s2_Rifle) s2_Rifle.gameObject.SetActive(s2 == WeaponType.Rifle);
+
+        // Seçili olaný beyaz yap, olmayaný soluk yap
+        ApplySelectionHighlight(0, s1_Handgun, s1_Shotgun, s1_Rifle);
+        ApplySelectionHighlight(1, s2_Handgun, s2_Shotgun, s2_Rifle);
+    }
+
+    void ApplySelectionHighlight(int slotIndex, params RawImage[] images)
+    {
+        Color c = (currentSlot == slotIndex && !isHoldingGrenade) ? Color.white : new Color(1, 1, 1, 0.3f);
+        foreach (var img in images) { if (img != null) img.color = c; }
+    }
+
     public void PickUpWeapon(WeaponType newWp)
     {
         int targetSlot = -1;
-
-        // 1. Önce boþ slot ara
         if (inventory[0] == WeaponType.None) targetSlot = 0;
         else if (inventory[1] == WeaponType.None) targetSlot = 1;
 
-        // 2. Boþ slot yoksa þu anki slotu yere at
-        if (targetSlot != -1)
-        {
-            currentSlot = targetSlot;
-        }
-        else
-        {
-            DropWeapon(); // Elindekini fýrlat (inventory[currentSlot] None olur)
-        }
+        if (targetSlot != -1) currentSlot = targetSlot;
+        else DropWeapon();
 
-        // 3. Silahý yerleþtir ve GÖRSELÝ ZORLA GÜNCELLE
         inventory[currentSlot] = newWp;
         isHoldingGrenade = false;
-
-        // Debug ekleyelim, Console ekranýnda hangi slota ne aldýðýný gör:
-        Debug.Log("Slot " + currentSlot + " içine þu silah alýndý: " + newWp);
-
         UpdateWeaponVisuals();
     }
+
     void DropWeapon()
     {
-        // Bomba elindeyken silah atamazsýn
         if (isHoldingGrenade) return;
-
         WeaponType toDrop = inventory[currentSlot];
         if (toDrop == WeaponType.None) return;
 
@@ -148,12 +193,10 @@ public class PlayerController : MonoBehaviour
 
     public void UpdateWeaponVisuals()
     {
-        // Önce hepsini kapat (Temizle)
         if (handgunObject) handgunObject.SetActive(false);
         if (shotgunObject) shotgunObject.SetActive(false);
         if (rifleObject) rifleObject.SetActive(false);
 
-        // Sadece bomba modunda deðilsek ve slot doluysa aç
         if (!isHoldingGrenade)
         {
             WeaponType activeWp = inventory[currentSlot];
@@ -161,13 +204,11 @@ public class PlayerController : MonoBehaviour
             if (activeWp == WeaponType.Shotgun && shotgunObject) shotgunObject.SetActive(true);
             if (activeWp == WeaponType.Rifle && rifleObject) rifleObject.SetActive(true);
         }
-        // Ýstersen buraya else { bomba_gorseli.SetActive(true); } ekleyebilirsin
     }
 
     void Shoot()
     {
         if (Time.time < nextFireTime) return;
-
         WeaponType type = inventory[currentSlot];
 
         if (type == WeaponType.Shotgun)
@@ -211,6 +252,7 @@ public class PlayerController : MonoBehaviour
     }
 
     public void AddHealth(float amount) => health = Mathf.Min(health + amount, 100f);
+
     public void TakeDamage(float amount)
     {
         health -= amount;
