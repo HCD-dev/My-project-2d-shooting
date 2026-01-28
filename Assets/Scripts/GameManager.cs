@@ -1,16 +1,28 @@
 using UnityEngine;
+using UnityEngine.SceneManagement; // Sahne yüklemek için ÞART
 
 public class GameManager : MonoBehaviour
 {
     [Header("Spawn Sýnýrlarý")]
-    public float xLimit = 12f; // Sað-Sol duvar çizgisi
-    public float yLimit = 6f;  // Üst-Alt duvar çizgisi
+    public float xLimit = 12f;
+    public float yLimit = 6f;
     public GameObject enemyPrefab;
     public float spawnRate = 3f;
 
     [Header("Ganimet Prefablarý")]
     public GameObject medkitPrefab;
     public GameObject grenadePickup;
+
+    // --- YENÝ EKLENEN RESTART FONKSÝYONU ---
+    public void RestartGame()
+    {
+        // Zamaný 1 yapmazsak yeni sahne donuk baþlar!
+        Time.timeScale = 1f;
+
+        // Mevcut sahneyi yeniden yükle
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+    // ---------------------------------------
 
     void OnEnable() { EnemyZ.OnEnemyDeath += HandleLoot; }
     void OnDisable() { EnemyZ.OnEnemyDeath -= HandleLoot; }
@@ -23,24 +35,14 @@ public class GameManager : MonoBehaviour
     void SpawnEnemy()
     {
         Vector3 spawnPos = Vector3.zero;
-
-        // 0: Üst Kenar, 1: Alt Kenar, 2: Sað Kenar, 3: Sol Kenar
         int edge = Random.Range(0, 4);
 
         switch (edge)
         {
-            case 0: // Üst çizgi üzerinde rastgele bir nokta
-                spawnPos = new Vector3(Random.Range(-xLimit, xLimit), yLimit, 0);
-                break;
-            case 1: // Alt çizgi üzerinde rastgele bir nokta
-                spawnPos = new Vector3(Random.Range(-xLimit, xLimit), -yLimit, 0);
-                break;
-            case 2: // Sað çizgi üzerinde rastgele bir nokta
-                spawnPos = new Vector3(xLimit, Random.Range(-yLimit, yLimit), 0);
-                break;
-            case 3: // Sol çizgi üzerinde rastgele bir nokta
-                spawnPos = new Vector3(-xLimit, Random.Range(-yLimit, yLimit), 0);
-                break;
+            case 0: spawnPos = new Vector3(Random.Range(-xLimit, xLimit), yLimit, 0); break;
+            case 1: spawnPos = new Vector3(Random.Range(-xLimit, xLimit), -yLimit, 0); break;
+            case 2: spawnPos = new Vector3(xLimit, Random.Range(-yLimit, yLimit), 0); break;
+            case 3: spawnPos = new Vector3(-xLimit, Random.Range(-yLimit, yLimit), 0); break;
         }
 
         Instantiate(enemyPrefab, spawnPos, Quaternion.identity);

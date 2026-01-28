@@ -271,4 +271,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 13035163b6132cc428c529bf4c8cf276, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyZ
-  data: {fileID: 0}
+  health: 50
+  speed: 2.5
+  damage: 5
+  damageInterval: 1

@@ -5,12 +5,13 @@ public class EnemyZ : MonoBehaviour, IDamageable
 {
     public float health = 50f;
     public float speed = 2.5f;
-    public float damage = 10f;
+    public float damage = 5f;
+    public float damageInterval = 1f; // Hasar verme sýklýðý (saniyede bir)
 
     private Transform player;
     private Rigidbody2D rb;
+    private float nextDamageTime; // Bir sonraki hasar ne zaman verilecek?
 
-    // Öldüðünde GameManager'a haber verir
     public static event Action<Vector3> OnEnemyDeath;
 
     void Start()
@@ -44,9 +45,22 @@ public class EnemyZ : MonoBehaviour, IDamageable
         Destroy(gameObject);
     }
 
-    private void OnCollisionEnter2D(Collision2D col)
+    // Çarpýþma devam ettiði sürece her karede kontrol eder
+    private void OnCollisionStay2D(Collision2D col)
     {
         if (col.gameObject.CompareTag("Player"))
-            col.gameObject.GetComponent<PlayerController>()?.TakeDamage(damage);
+        {
+            // Zamanlayýcý kontrolü: Þu anki zaman, bir sonraki hasar zamanýndan büyük mü?
+            if (Time.time >= nextDamageTime)
+            {
+                PlayerController pc = col.gameObject.GetComponent<PlayerController>();
+                if (pc != null)
+                {
+                    pc.TakeDamage(damage);
+                    // Zamaný güncelle (Þu anki zaman + bekleme süresi)
+                    nextDamageTime = Time.time + damageInterval;
+                }
+            }
+        }
     }
 }
